@@ -209,52 +209,29 @@ grid.arrange(scatPlot_reward, scatPlot_move, nrow=1,
 
 
 #### Whether Training Data Can Predict Testing Data ####
-dv <- bc_out_long$BC # Bhattacharyya Coefficient 
-iv <- nRewardFound_train$nRewardfound # number of reward found trials during training
-model <- lm(dv ~ iv)
-anova(model)
+dv <- bc_out %>% 
+  gather(key=RewardType, value=BC, Reward_F:Reward_M) %>% 
+  mutate(Participant=as.double(Participant)) %>% 
+  group_by(Participant) %>% 
+  summarise(averBC=mean(BC)) # Bhattacharyya Coefficient averaged across reward types
+iv <- dataNav_train %>% 
+  filter(RewardType!="NoReward") %>% 
+  filter(Block!=3) %>% 
+  group_by(Participant) %>% 
+  summarise(nRewardfound=sum(RewardFound==1)) # number of reward found trials during training
 
-# collapse 3 reward types
-nRewardFound_train %>% 
-  select(Participant,RewardType,nRewardfound) %>% 
-  spread(key=RewardType, value=nRewardfound) %>% 
-  mutate(nRewardfound_all=sum(F+M+W))
-
-
-#### ANOVA on Centroids ####
-averPos_reward <- rewardFound_train %>% 
-  group_by(Participant, RewardType, Delay, Environment) %>% 
-  summarise(averRewardX=mean(RewardX), averRewardY=mean(RewardY))
-averPos_move <- movePatt_test %>% 
-  group_by(Participant, RewardType, Delay, Environment) %>% 
-  summarise(averX=mean(X), averY=mean(Y))
-averPos_combine <- data.frame()
-for (i in 1:dim(averPos_reward)[1]) {
-  averPos_combine[i,1:6] <- averPos_reward[i,]
-  averPos_combine[i,7:8] <- averPos_move[i,5:6]
-}
-
-dist_averPos_long <- averPos_combine %>% 
-  mutate(Dist=sqrt((averX-averRewardX)^2+(averY-averRewardY)^2)) %>% 
-  select_at(c(1:4,9)) %>% 
-  mutate(Participant=factor(Participant), Delay=factor(Delay), 
-         Environment=factor(Environment), RewardType=factor(RewardType))
-levels(dist_averPos_long$Environment) <- c("Rural","Urban") # rename levels of Environment
-mixANOVA_cent <- ezANOVA(data = dist_averPos_long, dv = Dist, 
-                    wid = Participant, within = .(RewardType),
-                    between = .(Delay,Environment), 
-                    type = 3, detailed = TRUE)
-print(mixANOVA_cent)
-  
-barGraph_dist <- dist_averPos_long %>% 
-  group_by(Delay, Environment) %>% 
-  summarise(averDist=mean(Dist), SE = se(Dist)) %>% 
-  ggplot(aes(fill=Environment, y=averDist, x=Delay)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_errorbar(aes(ymin=averDist-SE, ymax=averDist+SE), width=.2,
-                position=position_dodge(.9)) + 
-  ylab("Avearage Distance Between Centroids of Training and Testing")
-plot(barGraph_dist)
-
+# correlational test
+cor.test(iv$nRewardfound, dv$averBC, method=c("pearson"))
+# remove sub70, it's still sig.
+cor.test(iv$nRewardfound[c(1:42,44:45)], dv$averBC[c(1:42,44:45)]) 
+# scatter plot
+corData <- data.frame()
+corData <- dv[,2]
+corData[,2] <-iv[,2]
+ggplot(corData, aes(x=nRewardfound, y=averBC)) +
+  geom_point() + 
+  geom_smooth(method=lm) +
+  ylab("Avearage Bhattacharyya Coefficient") +
+  xlab("Number of Rewards Found in Train")
 
 
