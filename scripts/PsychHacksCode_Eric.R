@@ -182,7 +182,9 @@ barGraph_BC <- bc_out_long %>%
   geom_bar(position="dodge", stat="identity") +
   geom_errorbar(aes(ymin=averBC-SE, ymax=averBC+SE), width=.2,
                 position=position_dodge(.9)) + 
-  ylab("Avearage Bhattacharyya Coefficient")
+  ylab("Avearage Bhattacharyya Coefficient") +
+  theme(legend.title = element_text(size = 20), legend.text = element_text(size = 16)) +
+  theme(axis.title = element_text(size = 20), axis.text = element_text(size = 16))
 plot(barGraph_BC)
 
 #### Plot Reward Locations and Move Patterns ####
@@ -232,6 +234,7 @@ ggplot(corData, aes(x=nRewardfound, y=averBC)) +
   geom_point() + 
   geom_smooth(method=lm) +
   ylab("Avearage Bhattacharyya Coefficient") +
-  xlab("Number of Rewards Found in Train")
+  xlab("Number of Rewards Found in Train") +
+  theme(axis.title = element_text(size = 20), axis.text = element_text(size = 16))
 
 
